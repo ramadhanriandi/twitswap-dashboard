@@ -29,7 +29,8 @@
     </form>
 
     <div class="d-flex justify-content-between align-items-center">
-      <PopularHashtags />
+      <PopularHashtags v-if="count % 2 === 1" :popularHashtags="popularHashtags" />
+      <PopularHashtags v-else :popularHashtags="popularHashtags" />
     </div>
   </div>
 </template>
@@ -47,6 +48,9 @@ export default {
     contexts: [],
     isStreaming: false,
     limit: 5,
+    polling: null,
+    popularHashtags: {},
+    count: 0,
   }),
   methods: {
     async handleStreaming() {
@@ -60,8 +64,29 @@ export default {
       if (response.status === 200) {
         this.isStreaming = !this.isStreaming;
       }
+
+      if (this.isStreaming) {
+        this.loadData();
+      } else {
+        clearInterval(this.polling);
+      }
+    },
+    loadData() {
+      this.polling = setInterval(async () => {
+        const response = await axios.get(
+          `${Configs.API_SERVER_URL}/v1/data`,
+          { data: {} },
+        );
+        
+        if (response.status === 200) {
+          const { data } = response.data;
+          this.popularHashtags = data.popularHashtags; 
+        }
+
+        this.count += 1;
+      }, 2000);
     }
-  }
+  },
 };
 </script>
 
