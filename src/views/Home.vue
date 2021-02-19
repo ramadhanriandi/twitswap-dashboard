@@ -38,9 +38,15 @@
       />
     </div>
 
-    <div class="d-flex justify-content-between align-items-center">
-      <PopularHashtags v-if="dataLoadCount % 2 === 1" :popularHashtags="popularHashtags" />
-      <PopularHashtags v-else :popularHashtags="popularHashtags" />
+    <div class="row justify-content-between align-items-center mb-5">
+      <PopularHashtags class="col" v-if="dataLoadCount % 2 === 1" :popularHashtags="popularHashtags" />
+      <PopularHashtags class="col" v-else :popularHashtags="popularHashtags" />
+      <TweetCountTotal class="col" v-if="dataLoadCount % 2 === 1" :tweetCountTotal="tweetCountTotal" />
+      <TweetCountTotal class="col" v-else :tweetCountTotal="tweetCountTotal" />
+    </div>
+    <div class="row justify-content-between align-items-center mb-5">
+      <TweetCountRate class="col-6" v-if="dataLoadCount % 2 === 1" :tweetCountRate="tweetCountRate" />
+      <TweetCountRate class="col-6" v-else :tweetCountRate="tweetCountRate" />
     </div>
   </div>
 </template>
@@ -51,14 +57,20 @@ import axios from 'axios';
 import Overview from '../components/Overview';
 import PopularHashtags from '../components/PopularHashtags';
 import PublicMetrics from '../components/PublicMetrics';
+import TweetCountRate from '../components/TweetCountRate';
+import TweetCountTotal from '../components/TweetCountTotal';
 
 import Configs from '../constants/config';
+
+import utils from '../utils/datetime';
 
 export default {
   components: {
     Overview,
     PopularHashtags,
     PublicMetrics,
+    TweetCountRate,
+    TweetCountTotal,
   },
   data: () => ({
     dataLoadCount: 0,
@@ -75,7 +87,9 @@ export default {
     overview: {
       startTime: null,
       totalTweetCount: 0,
-    }
+    },
+    tweetCountRate: [],
+    tweetCountTotal: [],
   }),
   methods: {
     async handleStreaming() {
@@ -93,10 +107,6 @@ export default {
       if (this.isStreaming) {
         this.overview.startTime = new Date();
 
-        this.publicMetric.likeCount += 1;
-        this.publicMetric.replyCount += 1;
-        this.publicMetric.retweetCount += 1;
-
         this.loadData();
       } else {
         clearInterval(this.polling);
@@ -112,8 +122,33 @@ export default {
         if (response.status === 200) {
           const { data } = response.data;
           const { popularHashtags, tweetCount } = data;
-          
-          this.popularHashtags = popularHashtags; 
+
+          this.popularHashtags = popularHashtags;
+
+          if (this.overview.totalTweetCount !== tweetCount.data) {
+            this.publicMetric.likeCount += Math.floor(Math.random() * 11);
+            this.publicMetric.replyCount += Math.floor(Math.random() * 11);
+            this.publicMetric.retweetCount += Math.floor(Math.random() * 11);
+          }
+
+          this.tweetCountRate = [...this.tweetCountRate, { 
+            value: Math.abs(this.overview.totalTweetCount - tweetCount.data),
+            label: utils.convertTime(new Date()),
+          }];
+
+          if (this.tweetCountRate.length > 10) {
+            this.tweetCountRate = this.tweetCountRate.slice(-10);
+          }
+
+          this.tweetCountTotal = [...this.tweetCountTotal, { 
+            value: tweetCount.data,
+            label: utils.convertTime(new Date()),
+          }];
+
+          if (this.tweetCountTotal.length > 10) {
+            this.tweetCountTotal = this.tweetCountTotal.slice(-10);
+          }
+
           this.overview.totalTweetCount = tweetCount.data;
         }
 
